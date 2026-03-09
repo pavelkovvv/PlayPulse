@@ -1,8 +1,8 @@
-"""Add need models
+"""Init models
 
-Revision ID: b81d92b9968f
+Revision ID: cb57d9497470
 Revises: 
-Create Date: 2026-01-20 15:58:29.462515
+Create Date: 2026-03-09 22:20:50.576705
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b81d92b9968f'
+revision: str = 'cb57d9497470'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,9 +35,13 @@ def upgrade() -> None:
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=50), nullable=False),
-    sa.Column('email', sa.String(), nullable=False),
+    sa.Column('first_name', sa.String(), nullable=True),
+    sa.Column('middle_name', sa.String(), nullable=True),
+    sa.Column('last_name', sa.String(), nullable=True),
+    sa.Column('email', sa.String(), nullable=True),
     sa.Column('password_hash', sa.String(), nullable=False),
     sa.Column('is_public', sa.Boolean(), nullable=False),
+    sa.Column('is_admin', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
@@ -100,5 +104,4 @@ def downgrade() -> None:
     op.drop_table('rating')
     op.drop_table('user')
     op.drop_table('game')
-    op.execute("DROP TYPE IF EXISTS statusgame")
     # ### end Alembic commands ###
