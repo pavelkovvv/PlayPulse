@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from settings import config_loader
+from dotenv import load_dotenv
+from src.routers import user
 
 
 def create_app() -> FastAPI:
@@ -20,15 +22,14 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # === Healthcheck ===
-    @app.get("/health", tags=["system"])
-    async def healthcheck():
-        return {"status": "ok"}
+    # === Роутеры ===
+    app.include_router(user.router)
 
     return app
 
 
 app = create_app()
+load_dotenv()
 
 
 def run() -> None:

@@ -29,7 +29,7 @@ def load_config() -> Dict[str, Any]:
 CONFIG = load_config()
 
 
-def config_loader(key: str, default: Any = None) -> Union[str, list, dict, None]:
+def config_loader(key: str, default: Any = None) -> Union[Any]:
     """
     Возвращает значение по ключу из конфигурации.
     Поддерживает вложенные ключи через точку, например:
