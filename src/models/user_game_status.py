@@ -25,7 +25,7 @@ class UserGameStatus(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    user: Mapped['User'] = relationship(back_populates='game_statuses', cascade="all, delete-orphan")
+    user: Mapped['User'] = relationship(back_populates='game_statuses')
     game: Mapped['Game'] = relationship(back_populates='game_statuses')
 
     __table_args__ = (
