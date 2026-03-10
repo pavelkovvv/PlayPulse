@@ -1,9 +1,11 @@
+from typing import Any, Sequence
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.user import User
 from src.auth import hash_password
-from src.schemas.user import UserCreate
+from src.schemas.user import UserCreate, UserUpdate
 
 
 async def get_user_by_username(username: str, db: AsyncSession) -> User | None:
@@ -20,6 +22,22 @@ async def get_user_by_email(email: str, db: AsyncSession) -> User | None:
     user = result.scalar_one_or_none()
 
     return user
+
+
+async def get_user_by_user_id(user_id: int, db: AsyncSession) -> User | None:
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    return user
+
+
+async def get_all_users(db: AsyncSession) -> Sequence[Any]:
+    query = select(User).order_by(User.id)
+    result = await db.execute(query)
+    users = result.scalars().all()
+
+    return users
 
 
 async def create_user(user_data: UserCreate, db: AsyncSession) -> User:
@@ -40,26 +58,4 @@ async def create_user(user_data: UserCreate, db: AsyncSession) -> User:
     return user
 
 
-# async def add_user(user: None, db: AsyncSession):
-#     # TODO: реализовать добавление пользователя после того как будет добавлена авторизация
-#     pass
-#
-#
-# async def get_user(user: None, db: AsyncSession):
-#     # TODO: реализовать получение пользователя после того как будет добавлена авторизация
-#     pass
-#
-#
-# async def get_users(user: None, db: AsyncSession):
-#     # TODO: реализовать получение всех пользователей после того как будет добавлена авторизация
-#     pass
-#
-#
-# async def update_user(user: None, db: AsyncSession):
-#     # TODO: реализовать обновление пользователя после того как будет добавлена авторизация
-#     pass
-#
-#
-# async def delete_user(user: None, db: AsyncSession):
-#     # TODO: реализовать удаление пользователя после того как будет добавлена авторизация
-#     pass
+# async def update_user(user_data: UserUpdate, db: AsyncSession) -> User:

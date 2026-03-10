@@ -1,12 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 
 from logs import logger
+from src.models.user import User
 from src.database import get_obj_db
 from src.crud import user as user_crud
-from src.auth import create_jwt_token
-from src.schemas.user import UserCreate, UserCreateResponse
-
+from src.auth import create_jwt_token, verify_token
+from src.schemas.user import UserCreate, UserCreateResponse, GetUserResponse, GetUsersListResponse
 
 router = APIRouter(
     prefix="/user",
@@ -50,7 +50,7 @@ async def create_user(
         )
 
         response_data = UserCreateResponse(
-            user_id=new_user.id,
+            id=new_user.id,
             username=new_user.username,
             email=new_user.email,
             first_name=new_user.first_name,
@@ -65,39 +65,82 @@ async def create_user(
         return response_data
 
     except Exception as err:
-        logger.exception(f'При попытке регистрации пользователя (username: {user_data.username}) произошла ошибка: {err}\n'
-                     f'Функция/метод: create_user')
+        logger.exception(
+            f'При попытке регистрации пользователя (username: {user_data.username}) произошла ошибка: {err}\n'
+            f'Функция/метод: create_user'
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Произошла внутренняя ошибка. Попробуйте позже.',
         )
 
 
-# @router.get("/{user_id}", summary="Получение данных о пользователе")
-# async def get_user(
-#     user_id: int = Query(..., description="ID пользователя"),
-#     db: AsyncSession = Depends(get_obj_db),
-# ):
-#     # TODO: реализовать получение пользователя после того как будет добавлена авторизация
-#     pass
-#
-#
-# @router.get("/", summary="Получение данных о всех пользователях")
-# async def get_users(
-#     db: AsyncSession = Depends(get_obj_db),
-# ):
-#     # TODO: реализовать получение всех пользователей после того как будет добавлена авторизация
-#     # TODO: добавить сюда пагинацию
-#     pass
-#
-#
-# @router.patch("/", summary="Обновление данных пользователя")
-# async def update_user(
-#     user_data: None = Query(..., description="Данные для апдейта информации о пользователе"),
-#     db: AsyncSession = Depends(get_obj_db),
-# ):
-#     # TODO: реализовать обновление пользователя после того как будет добавлена авторизация
-#     pass
+@router.get(
+    "/{user_id}",
+    response_model=GetUserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Получение данных о пользователе"
+)
+async def get_user(
+    user_id: int = Path(..., description="ID пользователя"),
+    db: AsyncSession = Depends(get_obj_db),
+    user: User = Depends(verify_token)
+):
+    try:
+        user = await user_crud.get_user_by_user_id(user_id, db)
+        if not user:
+            logger.warning(f'Пользователь с ID: {user_id} не найден.')
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Пользователь с ID: {user_id} не найден.'
+            )
+        return user
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception(
+            f'При попытке получения пользователя по ID: {user_id} произошла ошибка: {err}\n'
+            f'Функция/метод: get_user'
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Произошла внутренняя ошибка. Попробуйте позже.',
+        )
+
+
+@router.get(
+    "/",
+    response_model=GetUsersListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Получение данных о всех пользователях"
+)
+async def get_users(
+    db: AsyncSession = Depends(get_obj_db),
+):
+    try:
+        users = await user_crud.get_all_users(db)
+        return {
+            'users': users,
+            'total': len(users),
+        }
+    except Exception as err:
+        logger.exception(
+            f'При попытке получения всех пользователей произошла ошибка: {err}\n'
+            f'Функция/метод: get_users'
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Произошла внутренняя ошибка. Попробуйте позже.',
+        )
+
+
+@router.patch("/", summary="Обновление данных о пользователе")
+async def update_user(
+    user_data: None = Query(..., description="Данные для апдейта информации о пользователе"),
+    db: AsyncSession = Depends(get_obj_db),
+):
+    # TODO: реализовать обновление пользователя после того как будет добавлена авторизация
+    pass
 #
 #
 # @router.delete("/{user_id}", summary="Удаление пользователя")
