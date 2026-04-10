@@ -1,7 +1,8 @@
-from fastapi import HTTPException, status
+from fastapi import status
 
-from models import User
 from logs import logger
+from src.models.user import User
+from src.services.errors import ServiceError
 
 
 async def verification_user_action(current_user: User, other_user: User) -> None:
@@ -11,7 +12,7 @@ async def verification_user_action(current_user: User, other_user: User) -> None
             f'Пользователь {current_user.username} пытался совершить действия связанные с аккаунтом пользователя:'
             f' {other_user.username}'
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Вы можете изменять/удалять данные только своего профиля.'
+        raise ServiceError(
+            status.HTTP_403_FORBIDDEN,
+            'Вы можете изменять/удалять данные только своего профиля.',
         )
