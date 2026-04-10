@@ -1,12 +1,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, status, Path, Body
 
 from logs import logger
 from src.models.user import User
 from src.database import get_obj_db
 from src.crud import user as user_crud
+from src.utils import verification_user_action
 from src.auth import create_jwt_token, verify_token
-from src.schemas.user import UserCreate, UserCreateResponse, GetUserResponse, GetUsersListResponse
+from src.schemas.user import UserCreate, UserCreateResponse, GetUserResponse, GetUsersListResponse, UserUpdate
 
 router = APIRouter(
     prefix="/user",
@@ -84,7 +85,7 @@ async def create_user(
 async def get_user(
     user_id: int = Path(..., description="ID пользователя"),
     db: AsyncSession = Depends(get_obj_db),
-    user: User = Depends(verify_token)
+    current_user: User = Depends(verify_token)
 ):
     try:
         user = await user_crud.get_user_by_user_id(user_id, db)
@@ -116,6 +117,7 @@ async def get_user(
 )
 async def get_users(
     db: AsyncSession = Depends(get_obj_db),
+    current_user: User = Depends(verify_token),
 ):
     try:
         users = await user_crud.get_all_users(db)
@@ -134,19 +136,69 @@ async def get_users(
         )
 
 
-@router.patch("/", summary="Обновление данных о пользователе")
+@router.patch(
+    "/{user_id}",
+    response_model=GetUserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Обновление данных о пользователе",
+)
 async def update_user(
-    user_data: None = Query(..., description="Данные для апдейта информации о пользователе"),
+    user_id: int = Path(..., description='ID пользователя'),
+    user_data: UserUpdate = Body(..., description="Данные для апдейта информации о пользователе"),
     db: AsyncSession = Depends(get_obj_db),
+    current_user: User = Depends(verify_token),
 ):
-    # TODO: реализовать обновление пользователя после того как будет добавлена авторизация
-    pass
-#
-#
-# @router.delete("/{user_id}", summary="Удаление пользователя")
-# async def delete_user(
-#     user_id: int = Query(..., description="ID пользователя"),
-#     db: AsyncSession = Depends(get_obj_db),
-# ):
-#     # TODO: реализовать удаление пользователя после того как будет добавлена авторизация
-#     pass
+    try:
+        user_from_db = await user_crud.get_user_by_user_id(user_id, db)
+        if not user_from_db:
+            logger.warning(f'Пользователь с ID: {user_id} не найден.')
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Пользователь с ID: {user_id} не найден.'
+            )
+        await verification_user_action(current_user, user_from_db)
+        return await user_crud.update_user(user_from_db, user_data, db)
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception(
+            f'При попытке обновления пользователя по ID: {user_id} произошла ошибка: {err}\n'
+            f'Функция/метод: update_user'
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Произошла внутренняя ошибка. Попробуйте позже.',
+        )
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удаление пользователя",
+)
+async def delete_user(
+    user_id: int = Path(..., description="ID пользователя"),
+    db: AsyncSession = Depends(get_obj_db),
+    current_user: User = Depends(verify_token),
+):
+    try:
+        user_from_db = await user_crud.get_user_by_user_id(user_id, db)
+        if not user_from_db:
+            logger.warning(f'Пользователь с ID: {user_id} не найден.')
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Пользователь с ID: {user_id} не найден.'
+            )
+        await verification_user_action(current_user, user_from_db)
+        await user_crud.delete_user(user_from_db, db)
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception(
+            f'При попытке удаления пользователя по ID: {user_id} произошла ошибка: {err}\n'
+            f'Функция/метод: delete_user'
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Произошла внутренняя ошибка. Попробуйте позже.',
+        )

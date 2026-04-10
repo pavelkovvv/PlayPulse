@@ -58,4 +58,20 @@ async def create_user(user_data: UserCreate, db: AsyncSession) -> User:
     return user
 
 
-# async def update_user(user_data: UserUpdate, db: AsyncSession) -> User:
+async def update_user(user: User, user_data: UserUpdate, db: AsyncSession) -> User:
+    update_data = user_data.model_dump(exclude_unset=True, exclude_none=True)
+    if not update_data:
+        return user
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user
+
+
+async def delete_user(user: User, db: AsyncSession) -> None:
+    await db.delete(user)
+    await db.commit()
